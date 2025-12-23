@@ -1,22 +1,43 @@
-version: "3.9"
-
 services:
   catalogdb:
-    image: postgres:16-alpine
+    image: postgres:16
     container_name: catalogdb
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: 20100
+      POSTGRES_PASSWORD: "20100"
       POSTGRES_DB: catalogdb
+    ports:
+      - "5432:5432"
     volumes:
       - postgres_catalog:/var/lib/postgresql/data
+    restart: always
 
-  # catalog.api:
-  #   build:
-  #     context: .
-  #     dockerfile: Services/Catalog/Catalog.API/Dockerfile
-  #   depends_on:
-  #     - catalogdb
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@local.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - catalogdb
+    restart: unless-stopped
+
+  catalog.api:
+    container_name: catalog.api
+    build:
+      context: .
+      dockerfile: Services/Catalog/Catalog.API/Dockerfile
+    depends_on:
+      - catalogdb
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__CatalogDb: Host=catalogdb;Port=5432;Database=catalogdb;Username=postgres;Password=20100
+    ports:
+      - "8080:8080"
+    restart: always
 
 volumes:
   postgres_catalog:
